@@ -15,8 +15,11 @@
 
 #include <stdint.h>
 
-/** 7-bit I2C slave address (firmware uses 0x58; Arduino 8-bit form 0xB0 >> 1). */
+/** 7-bit I2C slave address. */
 #define IRPOS_V2_I2C_ADDR 0x58
+
+/** Minimum B_expo[15:0] setting from the PAJ7025R2 datasheet (20 us); effective maximum depends on frame period. */
+#define IRPOS_V2_EXPOSURE_MIN 100
 
 /** Frame region: 16 objects × 16 bytes, read-only from host. */
 #define REG_FRAME_LEN    0x10
@@ -48,6 +51,16 @@
 #define REG_R_B_EXPO_LSB           0x14 /**< reg 0x0e, bank 0x01 */
 #define REG_R_B_EXPO_MSB           0x15 /**< reg 0x0f, bank 0x01 */
 #define REG_W_B_EXPO_COMMIT        0x16 /**< Write 0x01 to commit exposure to bank1 */
+#define REG_I2C_ADDR_PENDING       0x17 /**< Pending 7-bit I2C address to save */
+#define REG_I2C_ADDR_COMMIT        0x18 /**< Write 0xA5 to save pending address to flash */
+#define REG_I2C_ADDR_STATUS        0x19 /**< Address save status */
+#define REG_I2C_ADDR_ACTIVE        0x1A /**< Current active 7-bit I2C address, read-only */
+
+#define REG_I2C_ADDR_COMMIT_KEY        0xA5
+#define REG_I2C_ADDR_STATUS_OK         0x00
+#define REG_I2C_ADDR_STATUS_INVALID    0x01
+#define REG_I2C_ADDR_STATUS_FLASH_FAIL 0x02
+#define REG_I2C_ADDR_STATUS_PENDING    0x03
 
 /**
  * @brief One tracked object, 16 bytes (matches PAJ7025R2 `regbank05_t`).

@@ -1,6 +1,6 @@
 /*!
  * @file getPosition.ino
- * @brief Example: read up to 16 IR objects via the CS32 I2C bridge and print coordinates and metrics.
+ * @brief Example: read up to 16 IR objects and print coordinates and metrics.
  * @details Demonstrates `begin()`, optional parameter tuning (with valid ranges), `update()` per frame,
  *          and per-object accessors. See README "Configuration parameter ranges" for limits.
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
@@ -11,14 +11,12 @@
  * @url         https://github.com/DFRobot/DFRobot_IRPositionV2
  */
 
-#include <Wire.h>
 #include "DFRobot_IRPositionV2.h"
 
-/* >> Step 1: Create the driver (default: Wire + 8-bit address 0xB0 → 7-bit 0x58) */
-DFRobot_IRPositionV2 irPosition;
-// Optional: DFRobot_IRPositionV2 irPosition(&Wire, 0xB0);
+/* >> Step 1: Create the driver (Wire + default 7-bit I2C address 0x58) */
+DFRobot_IRPositionV2 irPosition(&Wire, 0x58);
 
-/** Demo exposure: 16-bit (range 0–65535). Adjust for your lighting. */
+/** Demo exposure: B_expo[15:0] (range 100–65535). Adjust for your lighting. */
 static const uint16_t kDemoExposure = 0x0080;
 
 static uint32_t s_lastExpoPrintMs = 0;
@@ -36,12 +34,11 @@ void setup()
 
   Serial.println(F("DFRobot IRPosition V2 - Get Position Example"));
 
-  if (!irPosition.begin()) {
+  while (!irPosition.begin()) {
     Serial.println(F("IRPositionV2 init failed: check wiring, pull-ups, and bridge firmware."));
-    while (1) {
-      delay(1000);
-    }
+    delay(1000);
   }
+  Serial.println(F("IRPositionV2 init OK."));
 
   /**
    * Optional tuning (see README "Configuration parameter ranges"):
@@ -55,8 +52,8 @@ void setup()
   irPosition.setScaleResolution(2490, 2490);   // x,y each 0–4095
   irPosition.setMaxTrackingNumber(16);          // 1–16
 
-  // setExposure(expo, settleMs): expo 0–65535; settleMs = ms to wait after commit (default 10).
-  if (irPosition.setExposure(kDemoExposure, 10)) {
+  // setExposure(expo): expo 100–65535; waits 10 ms after commit by default.
+  if (irPosition.setExposure(kDemoExposure)) {
     Serial.print(F("setExposure OK, wrote 0x"));
     Serial.println(kDemoExposure, HEX);
   } else {

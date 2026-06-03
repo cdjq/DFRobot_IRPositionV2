@@ -9,6 +9,7 @@
 * [简介](#简介)
 * [配置参数范围](#配置参数范围)
 * [安装](#安装)
+* [示例](#示例)
 * [方法](#方法)
 * [兼容性](#兼容性)
 * [历史](#历史)
@@ -17,7 +18,7 @@
 ## 简介
 
 * 每帧最多跟踪 **16** 个红外光点（索引 **0–15**）。
-* 使用 **I2C** 通信，7 位从机地址为 **`0x58`**（Arduino 上常写成 8 位地址 **`0xB0`**）。`begin()` 内将 **`Wire`** 设为 **400 kHz**。
+* 使用 **I2C** 通信，7 位从机地址为 **`0x58`**。`begin()` 内将 **`Wire`** 设为 **400 kHz**。
 * 每个目标可读取 **中心坐标（12 位缩放后）**、原生 **98×98** 网格上的 **边界**、**平均/最大亮度**、**半径**（打包字段低 4 位）。
 * 在读取任意目标数据前，请在循环中调用一次 **`update()`** 刷新内部帧缓存。
 
@@ -27,12 +28,13 @@
 
 | 项目 | 范围 / 说明 |
 | ---- | ----------- |
-| **I2C 地址** | 7 位 `0x58`（8 位常写作 `0xB0`）；`DFRobot_IRPositionV2(TwoWire*, uint8_t)` 传入 **8 位**地址。 |
+| **I2C 地址** | 7 位 `0x58`；`DFRobot_IRPositionV2(TwoWire*, uint8_t)` 传入 **7 位**地址。 |
+| **`setI2CAddress(addr7bit, settleMs)`** | `addr7bit`：**0x08–0x77**。保存到桥接芯片 flash，复位或重新上电后生效；地址非法、通信失败、flash 保存失败或等待超时时返回 `false`。 |
 | **`setIRBrightnessThreshold(brightness)`** | `brightness`：**0–255**（文档/固件常见默认 **0x97**）。数值越高，对亮度要求越严。 |
 | **`setIRDetectionNoise(noise)`** | `noise`：**0–255**（常见默认 **0x0A**）。用于抑制噪声触发。 |
 | **`setScaleResolution(x, y)`** | 每轴 **0–4095**（超过会被库内限制为 4095）。将传感器原生分辨率映射到 12 位输出；从 **98×98** 约放大 30 倍时常用 **2490×2490**。 |
 | **`setMaxTrackingNumber(num)`** | `num`：**1–16**（库内会钳位）。 |
-| **`setExposure(expo, settleMs)`** | `expo`：**0–65535**；`settleMs`：提交曝光后等待的毫秒数（默认 **10**），再读回更稳妥。 |
+| **`setExposure(expo, settleMs)`** | `expo`：**100–65535**（低于 100 时库内会限制为 100，实际最大值还受帧周期限制）；`settleMs`：提交曝光后等待的毫秒数（默认 **10**），再读回更稳妥。 |
 | **`getIRCoordinate(IRnum)`** | `IRnum`：**0–15**。返回打包的 **12 位 X/Y**，范围 **0–4095**（与 `setScaleResolution` 一致）。 |
 | **`getIRBound(IRnum)`** | `IRnum`：**0–15**。返回 **上、下、左、右**，单位为原生网格 **0–98**。 |
 | **`getAverageBrightness` / `getMaxBrightness`** | 返回值 **0–255**。 |
@@ -43,22 +45,27 @@
 1. 下载本库到 `\Arduino\libraries`（或通过库管理器安装，若已发布），然后打开 `examples` 目录运行示例。
 2. 本库仅依赖 **Arduino** 核心与 **`Wire`**，无需其它第三方库。
 
+## 示例
+
+* `getPosition`：读取红外目标坐标与亮度等数据。
+* `setI2CAddress`：保存新的 7 位桥接地址到 flash，成功后需要复位或重新上电。
+
 ## 方法
 
 ```c++
   /**
    * @fn DFRobot_IRPositionV2
-   * @brief 默认构造函数（使用 `Wire` 与 7 位地址 `IRPOS_V2_I2C_ADDR` / 8 位 `0xB0`）。
+   * @brief 默认构造函数（使用 `Wire` 与 7 位地址 `IRPOS_V2_I2C_ADDR`）。
    */
   DFRobot_IRPositionV2();
 
   /**
    * @fn DFRobot_IRPositionV2
-   * @brief 指定 I2C 总线与 8 位地址（例如 `0xB0` → 7 位 `0x58`）。
+   * @brief 指定 I2C 总线与 7 位地址。
    * @param pWire `TwoWire` 指针（NULL 则使用 `Wire`）。
-   * @param I2C_addr 8 位 I2C 地址。
+   * @param addr7bit 7 位 I2C 地址。
    */
-  DFRobot_IRPositionV2(TwoWire *pWire, uint8_t I2C_addr);
+  DFRobot_IRPositionV2(TwoWire *pWire, uint8_t addr7bit);
 
   /**
    * @fn begin
@@ -110,7 +117,7 @@
   /**
    * @fn setExposure
    * @brief 写入 16 位曝光、提交，并可在提交后延时再读回。
-   * @param expo 0–65535。
+   * @param expo 100–65535。低于 100 时库内会限制为 100，实际最大值还受帧周期限制。
    * @param settleMs 提交后延时（毫秒），默认 10。
    * @return 成功返回 true，I2C 失败返回 false。
    */
@@ -123,6 +130,23 @@
    * @return 成功返回 true，I2C 失败返回 false。
    */
   bool getExposure(uint16_t &expo);
+
+  /**
+   * @fn setI2CAddress
+   * @brief 保存新的 7 位 I2C 地址到桥接芯片 flash，复位或重新上电后生效。
+   * @param addr7bit 新 7 位地址，范围 0x08–0x77。
+   * @param settleMs 等待保存操作完成的最长时间（毫秒），默认 100。
+   * @return 保存成功返回 true；地址非法、I2C 失败、flash 失败或超时返回 false。
+   */
+  bool setI2CAddress(uint8_t addr7bit, uint16_t settleMs = 100);
+
+  /**
+   * @fn getI2CAddress
+   * @brief 读取当前生效的 7 位 I2C 地址。
+   * @param addr7bit 输出引用。
+   * @return 成功返回 true，I2C 失败返回 false。
+   */
+  bool getI2CAddress(uint8_t &addr7bit);
 
   /**
    * @fn getIRCoordinate

@@ -30,11 +30,11 @@ public:
 
   /**
    * @fn DFRobot_IRPositionV2
-   * @brief Construct with a custom I2C bus and 8-bit address (e.g. `0xB0` → 7-bit `0x58`).
+   * @brief Construct with a custom I2C bus and 7-bit address.
    * @param pWire Pointer to `TwoWire` instance (pass `NULL` to use `Wire`).
-   * @param I2C_addr 8-bit I2C address (common: `0xB0`).
+   * @param addr7bit 7-bit I2C address.
    */
-  DFRobot_IRPositionV2(TwoWire *pWire, uint8_t I2C_addr);
+  DFRobot_IRPositionV2(TwoWire *pWire, uint8_t addr7bit);
 
   /**
    * @fn ~DFRobot_IRPositionV2
@@ -93,7 +93,7 @@ public:
   /**
    * @fn setExposure
    * @brief Write 16-bit exposure, commit, and optionally wait before readback.
-   * @param expo Range 0–65535.
+   * @param expo Range 100–65535. Values below 100 are clamped to 100; effective maximum depends on frame period.
    * @param settleMs Delay in milliseconds after commit (default 10).
    * @return `true` if writes succeed, `false` on I2C error.
    */
@@ -106,6 +106,23 @@ public:
    * @return `true` on success, `false` on I2C error.
    */
   bool getExposure(uint16_t &expo);
+
+  /**
+   * @fn setI2CAddress
+   * @brief Save a new 7-bit I2C address to bridge flash; it takes effect after reset or power cycle.
+   * @param addr7bit New 7-bit address, valid range 0x08–0x77.
+   * @param settleMs Maximum milliseconds to wait for the save operation to finish (default 100).
+   * @return `true` if the address is saved, `false` on invalid address, I2C error, flash failure, or timeout.
+   */
+  bool setI2CAddress(uint8_t addr7bit, uint16_t settleMs = 100);
+
+  /**
+   * @fn getI2CAddress
+   * @brief Read the current active 7-bit I2C address from the bridge.
+   * @param addr7bit Output reference for the active 7-bit address.
+   * @return `true` on success, `false` on I2C error.
+   */
+  bool getI2CAddress(uint8_t &addr7bit);
 
   /**
    * @fn getIRCoordinate
@@ -183,6 +200,14 @@ private:
    * @return `true` if `index` is in range.
    */
   bool readObject(int index, IRPosV2_ObjData &obj);
+
+  /**
+   * @fn getI2CAddressStatus
+   * @brief Read the last I2C address save status.
+   * @param status Output status: `0x00` OK, `0x01` invalid address/commit, `0x02` flash failure, `0x03` pending.
+   * @return `true` on success, `false` on I2C error.
+   */
+  bool getI2CAddressStatus(uint8_t &status);
 
   TwoWire *_pWire;       ///< I2C bus used for transfers
   uint8_t  _addr7bit;    ///< 7-bit bridge address

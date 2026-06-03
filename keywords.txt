@@ -17,6 +17,10 @@ setIRBrightnessThreshold	KEYWORD2
 setIRDetectionNoise	KEYWORD2
 setScaleResolution	KEYWORD2
 setMaxTrackingNumber	KEYWORD2
+setExposure	KEYWORD2
+getExposure	KEYWORD2
+setI2CAddress	KEYWORD2
+getI2CAddress	KEYWORD2
 getIRCoordinate	KEYWORD2
 getIRBound	KEYWORD2
 getAverageBrightness	KEYWORD2
@@ -30,4 +34,4 @@ getRadius	KEYWORD2
 REG_FRAME_LEN	LITERAL1
 REG_FRAME_COUNT	LITERAL1
 REG_PARAM_BASE	LITERAL1
-
+IRPOS_V2_EXPOSURE_MIN	LITERAL1
