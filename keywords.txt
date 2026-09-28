@@ -21,6 +21,7 @@ setExposure	KEYWORD2
 getExposure	KEYWORD2
 setI2CAddress	KEYWORD2
 getI2CAddress	KEYWORD2
+setIndicator	KEYWORD2
 getIRCoordinate	KEYWORD2
 getIRBound	KEYWORD2
 getAverageBrightness	KEYWORD2

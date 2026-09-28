@@ -149,6 +149,14 @@
   bool getI2CAddress(uint8_t &addr7bit);
 
   /**
+   * @fn setIndicator
+   * @brief 打开/关闭传感器上的指示灯。
+   * @param status true 打开，false 关闭。
+   * @return 设置成功返回 true，I2C 失败返回 false。
+   */
+  bool setIndicator(bool status);
+
+  /**
    * @fn getIRCoordinate
    * @brief 获取上一帧 `update()` 后第 n 个光点的中心坐标。
    * @param IRnum 0–15。

@@ -338,6 +338,19 @@ bool DFRobot_IRPositionV2::getI2CAddress(uint8_t &addr7bit)
 }
 
 /**
+ * @fn DFRobot_IRPositionV2::setIndicator
+ * @brief Turn the on-board indicator LED on or off
+ * @param status `true` to turn on, `false` to turn off.
+ * @return `true` if the register write succeeds.
+ */
+bool DFRobot_IRPositionV2::setIndicator(bool status)
+{
+  uint8_t val = status ? 0x01 : 0x00;
+  uint16_t reg = REG_PARAM_BASE + REG_INDICATOR;
+  return (writeReg(reg, &val, 1) == 0);
+}
+
+/**
  * @fn DFRobot_IRPositionV2::getI2CAddressStatus
  * @brief Read last address-save status
  * @param status Output status byte.

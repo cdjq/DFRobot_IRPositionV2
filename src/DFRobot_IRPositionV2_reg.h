@@ -55,6 +55,7 @@
 #define REG_I2C_ADDR_COMMIT        0x18 /**< Write 0xA5 to save pending address to flash */
 #define REG_I2C_ADDR_STATUS        0x19 /**< Address save status */
 #define REG_I2C_ADDR_ACTIVE        0x1A /**< Current active 7-bit I2C address, read-only */
+#define REG_INDICATOR              0x1B /**< Indicator LED: write 0 off, non-zero on; reads back 0/1 */
 
 #define REG_I2C_ADDR_COMMIT_KEY        0xA5
 #define REG_I2C_ADDR_STATUS_OK         0x00

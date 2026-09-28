@@ -40,6 +40,7 @@ void setup()
   }
   Serial.println(F("IRPositionV2 init OK."));
 
+  irPosition.setIndicator(false);
   /**
    * Optional tuning (see README "Configuration parameter ranges"):
    * - setIRBrightnessThreshold: 0–255 (typ. default 0x97)

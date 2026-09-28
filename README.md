@@ -151,6 +151,14 @@ Exact factory defaults and optical behavior may vary; always validate on your ha
   bool getI2CAddress(uint8_t &addr7bit);
 
   /**
+   * @fn setIndicator
+   * @brief Set turn on/off the indicator of the sensor
+   * @param status `true` to turn on, `false` to turn off.
+   * @return: whether set indicator on/off success
+   */
+  bool setIndicator(bool status);
+
+  /**
    * @fn getIRCoordinate
    * @brief Center of the IR spot from the last `update()` frame.
    * @param IRnum 0–15.
