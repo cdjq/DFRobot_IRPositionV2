@@ -11,10 +11,11 @@
  */
 
 #include <Wire.h>
+
 #include "DFRobot_IRPositionV2.h"
 
 static const uint8_t kCurrentAddr7bit = 0x58;
-static const uint8_t kNewAddr7bit = 0x59;
+static const uint8_t kNewAddr7bit     = 0x59;
 
 DFRobot_IRPositionV2 irPosition(&Wire, kCurrentAddr7bit);
 
@@ -22,7 +23,7 @@ void setup()
 {
   Serial.begin(115200);
   while (!Serial) {
-    ; // USB-Leonardo/M0: wait for Serial
+    ;    // USB-Leonardo/M0: wait for Serial
   }
 
   Serial.println(F("DFRobot IRPosition V2 - Set I2C Address Example"));
@@ -42,7 +43,7 @@ void setup()
   Serial.print(F("Saving new 7-bit address: 0x"));
   Serial.println(kNewAddr7bit, HEX);
 
-  if (irPosition.setI2CAddress(kNewAddr7bit, 200)) {
+  if (irPosition.setI2CAddress(kNewAddr7bit)) {
     Serial.println(F("Address saved. Reset or power-cycle the module."));
     Serial.print(F("After reset, use 7-bit address: 0x"));
     Serial.println(kNewAddr7bit, HEX);
@@ -51,6 +52,4 @@ void setup()
   }
 }
 
-void loop()
-{
-}
+void loop() {}

@@ -2,7 +2,9 @@
 
 * [English Version](./README.md)
 
-**DFRobot_IRPositionV2** 是面向红外定位模组（**SKU：SEN0701**，传感器 **PAJ7025R2**）的 Arduino 主机库，通过 **CS32 I2C 桥接**固件访问。主机每次 `update()` 读取 **16 个对象 × 16 字节** 的完整帧，并可配置阈值、坐标缩放、曝光与最大跟踪目标数等参数。
+红外定位模组（**SKU：SEN0701**）每帧最多跟踪 **16** 个红外光点，并给出每个光点的中心坐标、边界、亮度和半径。模组通过 **I2C** 连接，默认 7 位地址为 **0x58**。
+
+**DFRobot_IRPositionV2** 用于在 Arduino 上驱动该模组。调用 `update()` 读取一帧后，可设置检测阈值、坐标缩放、曝光、最大跟踪数量、指示灯和模组 I2C 地址。
 
 ## 目录
 
@@ -29,12 +31,12 @@
 | 项目 | 范围 / 说明 |
 | ---- | ----------- |
 | **I2C 地址** | 7 位 `0x58`；`DFRobot_IRPositionV2(TwoWire*, uint8_t)` 传入 **7 位**地址。 |
-| **`setI2CAddress(addr7bit, settleMs)`** | `addr7bit`：**0x08–0x77**。保存到桥接芯片 flash，复位或重新上电后生效；地址非法、通信失败、flash 保存失败或等待超时时返回 `false`。 |
+| **`setI2CAddress(addr7bit)`** | `addr7bit`：**0x08–0x77**。保存到桥接芯片 flash，复位或重新上电后生效。保存完成即返回；地址非法、通信失败、flash 保存失败，或内部时限（200 ms）内仍未完成时返回 `false`。 |
 | **`setIRBrightnessThreshold(brightness)`** | `brightness`：**0–255**（文档/固件常见默认 **0x97**）。数值越高，对亮度要求越严。 |
 | **`setIRDetectionNoise(noise)`** | `noise`：**0–255**（常见默认 **0x0A**）。用于抑制噪声触发。 |
 | **`setScaleResolution(x, y)`** | 每轴 **0–4095**（超过会被库内限制为 4095）。将传感器原生分辨率映射到 12 位输出；从 **98×98** 约放大 30 倍时常用 **2490×2490**。 |
 | **`setMaxTrackingNumber(num)`** | `num`：**1–16**（库内会钳位）。 |
-| **`setExposure(expo, settleMs)`** | `expo`：**100–65535**（低于 100 时库内会限制为 100，实际最大值还受帧周期限制）；`settleMs`：提交曝光后等待的毫秒数（默认 **10**），再读回更稳妥。 |
+| **`setExposure(expo)`** | `expo`：**100–65535**（低于 100 时库内会限制为 100，实际最大值还受帧周期限制）。两次写入都成功即返回 `true`，随后固定等待 **100 ms**。写入失败时不等待。需要当前值时调用 `getExposure()`。 |
 | **`getIRCoordinate(IRnum)`** | `IRnum`：**0–15**。返回打包的 **12 位 X/Y**，范围 **0–4095**（与 `setScaleResolution` 一致）。 |
 | **`getIRBound(IRnum)`** | `IRnum`：**0–15**。返回 **上、下、左、右**，单位为原生网格 **0–98**。 |
 | **`getAverageBrightness` / `getMaxBrightness`** | 返回值 **0–255**。 |
@@ -44,6 +46,7 @@
 
 1. 下载本库到 `\Arduino\libraries`（或通过库管理器安装，若已发布），然后打开 `examples` 目录运行示例。
 2. 本库仅依赖 **Arduino** 核心与 **`Wire`**，无需其它第三方库。
+3. **树莓派 / Python** 版本位于 [`python/raspberry`](./python/raspberry/README_CN.md)，依赖 `smbus2`，提供与 Arduino 版一一对应的 snake_case 接口（示例 `get_position.py`、`set_i2c_address.py`）。
 
 ## 示例
 
@@ -55,7 +58,7 @@
 ```c++
   /**
    * @fn DFRobot_IRPositionV2
-   * @brief 默认构造函数（使用 `Wire` 与 7 位地址 `IRPOS_V2_I2C_ADDR`）。
+   * @brief 默认构造函数（使用 `Wire` 与 7 位地址 0x58）。
    */
   DFRobot_IRPositionV2();
 
@@ -116,12 +119,11 @@
 
   /**
    * @fn setExposure
-   * @brief 写入 16 位曝光、提交，并可在提交后延时再读回。
+   * @brief 写入 16 位曝光、提交，并固定等待 100 ms。
    * @param expo 100–65535。低于 100 时库内会限制为 100，实际最大值还受帧周期限制。
-   * @param settleMs 提交后延时（毫秒），默认 10。
-   * @return 成功返回 true，I2C 失败返回 false。
+   * @return 两次写入都成功返回 true，I2C 失败返回 false。写入失败时不等待。
    */
-  bool setExposure(uint16_t expo, uint16_t settleMs = 10);
+  bool setExposure(uint16_t expo);
 
   /**
    * @fn getExposure
@@ -135,10 +137,9 @@
    * @fn setI2CAddress
    * @brief 保存新的 7 位 I2C 地址到桥接芯片 flash，复位或重新上电后生效。
    * @param addr7bit 新 7 位地址，范围 0x08–0x77。
-   * @param settleMs 等待保存操作完成的最长时间（毫秒），默认 100。
    * @return 保存成功返回 true；地址非法、I2C 失败、flash 失败或超时返回 false。
    */
-  bool setI2CAddress(uint8_t addr7bit, uint16_t settleMs = 100);
+  bool setI2CAddress(uint8_t addr7bit);
 
   /**
    * @fn getI2CAddress

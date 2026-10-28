@@ -27,12 +27,3 @@ getIRBound	KEYWORD2
 getAverageBrightness	KEYWORD2
 getMaxBrightness	KEYWORD2
 getRadius	KEYWORD2
-
-#######################################
-# Constants (LITERAL1)
-#######################################
-
-REG_FRAME_LEN	LITERAL1
-REG_FRAME_COUNT	LITERAL1
-REG_PARAM_BASE	LITERAL1
-IRPOS_V2_EXPOSURE_MIN	LITERAL1

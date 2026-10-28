@@ -2,7 +2,9 @@
 
 * [中文版本](./README_CN.md)
 
-**DFRobot_IRPositionV2** is an Arduino host library for the IR positioning module (**SKU: SEN0701**) based on **PAJ7025R2**, accessed through a **CS32 I2C bridge** firmware. The host reads a **16 × 16-byte** object frame per update and can configure thresholds, scaling, exposure, and max tracked targets.
+The IR positioning module (**SKU: SEN0701**) tracks up to **16** infrared spots in each frame and reports the center, boundary, brightness and radius of every spot. It connects over **I2C** at the default 7-bit address **0x58**.
+
+**DFRobot_IRPositionV2** drives the module from Arduino. It reads one frame with `update()`, then lets you set the detection threshold, coordinate scale, exposure, maximum number of targets, the indicator LED and the module I2C address.
 
 ## Table of Contents
 
@@ -29,12 +31,12 @@ Use these ranges when tuning parameters in your sketch or product integration:
 | Item | Range / note |
 | ---- | -------------- |
 | **I2C address** | 7-bit `0x58`; pass a 7-bit address to `DFRobot_IRPositionV2(TwoWire*, uint8_t)`. |
-| **`setI2CAddress(addr7bit, settleMs)`** | `addr7bit`: **0x08–0x77**. Saves to bridge flash and takes effect after reset or power cycle; returns `false` if the address is invalid, communication fails, flash save fails, or the operation times out. |
+| **`setI2CAddress(addr7bit)`** | `addr7bit`: **0x08–0x77**. Saves to bridge flash and takes effect after reset or power cycle. Returns as soon as the save finishes, and returns `false` if the address is invalid, communication fails, flash save fails, or it is still pending after the internal limit (200 ms). |
 | **`setIRBrightnessThreshold(brightness)`** | `brightness`: **0–255** (typical default in firmware/docs **0x97**). Higher → stricter brightness gate. |
 | **`setIRDetectionNoise(noise)`** | `noise`: **0–255** (typical default **0x0A**). Adjusts noise rejection. |
 | **`setScaleResolution(x, y)`** | Each axis **0–4095** (values above 4095 are clamped). Maps native sensor space to scaled 12-bit outputs; common example **2490×2490** for ~30× scale from **98×98**. |
 | **`setMaxTrackingNumber(num)`** | `num`: **1–16** (clamped by the library). |
-| **`setExposure(expo, settleMs)`** | `expo`: **100–65535** (values below 100 are clamped by the library; effective maximum depends on frame period); `settleMs`: post-commit delay in **ms** (default **10**) before relying on readback. |
+| **`setExposure(expo)`** | `expo`: **100–65535** (values below 100 are clamped by the library; effective maximum depends on frame period). Returns `true` when both writes succeed, then waits a fixed **100 ms**. The wait is skipped when a write fails. Use `getExposure()` to read the current value. |
 | **`getIRCoordinate(IRnum)`** | `IRnum`: **0–15**. Returns packed **12-bit X/Y** in **0–4095** after scaling (see `setScaleResolution`). |
 | **`getIRBound(IRnum)`** | `IRnum`: **0–15**. Returns **Up, Down, Left, Right** in **0–98** (native sensor cells). |
 | **`getAverageBrightness` / `getMaxBrightness`** | Return **0–255**. |
@@ -46,6 +48,7 @@ Exact factory defaults and optical behavior may vary; always validate on your ha
 
 1. Download the library into your `\Arduino\libraries` folder (or install from the Library Manager when published), then open the `examples` folder and run the sketches.
 2. This library depends only on **Arduino** core APIs and **`Wire`**.
+3. A **Raspberry Pi / Python** version is provided in [`python/raspberry`](./python/raspberry/README.md); it depends on `smbus2` and offers the same API in snake_case (`get_position.py`, `set_i2c_address.py`).
 
 ## Examples
 
@@ -57,7 +60,7 @@ Exact factory defaults and optical behavior may vary; always validate on your ha
 ```c++
   /**
    * @fn DFRobot_IRPositionV2
-   * @brief Default constructor (uses `Wire` and 7-bit address `IRPOS_V2_I2C_ADDR`).
+   * @brief Default constructor (uses `Wire` and 7-bit address 0x58).
    */
   DFRobot_IRPositionV2();
 
@@ -118,12 +121,11 @@ Exact factory defaults and optical behavior may vary; always validate on your ha
 
   /**
    * @fn setExposure
-   * @brief Write 16-bit exposure, commit, and optional delay before readback.
+   * @brief Write 16-bit exposure, commit it, and wait a fixed 100 ms.
    * @param expo 100–65535. Values below 100 are clamped by the library; effective maximum depends on frame period.
-   * @param settleMs Delay in ms after commit (default 10).
-   * @return `true` on success, `false` on I2C error.
+   * @return `true` if both writes succeed, `false` on I2C error. The wait is skipped when a write fails.
    */
-  bool setExposure(uint16_t expo, uint16_t settleMs = 10);
+  bool setExposure(uint16_t expo);
 
   /**
    * @fn getExposure
@@ -137,10 +139,9 @@ Exact factory defaults and optical behavior may vary; always validate on your ha
    * @fn setI2CAddress
    * @brief Save a new 7-bit I2C address to bridge flash; it takes effect after reset or power cycle.
    * @param addr7bit New 7-bit address, valid range 0x08–0x77.
-   * @param settleMs Maximum wait in ms for the save operation to finish (default 100).
    * @return `true` if the address is saved, `false` on invalid address, I2C error, flash failure, or timeout.
    */
-  bool setI2CAddress(uint8_t addr7bit, uint16_t settleMs = 100);
+  bool setI2CAddress(uint8_t addr7bit);
 
   /**
    * @fn getI2CAddress

@@ -22,13 +22,9 @@ static bool irpos_v2_isValidI2CAddress(uint8_t addr7bit)
 /**
  * @fn DFRobot_IRPositionV2::DFRobot_IRPositionV2
  * @brief Default constructor of DFRobot_IRPositionV2 class
- * @details Uses `Wire` and default 7-bit address `IRPOS_V2_I2C_ADDR`.
+ * @details Uses `Wire` and default 7-bit address `I2C_ADDR`.
  */
-DFRobot_IRPositionV2::DFRobot_IRPositionV2()
-: _pWire(&Wire),
-  _addr7bit(IRPOS_V2_I2C_ADDR)
-{
-}
+DFRobot_IRPositionV2::DFRobot_IRPositionV2() : _pWire(&Wire), _addr7bit(I2C_ADDR) {}
 
 /**
  * @fn DFRobot_IRPositionV2::DFRobot_IRPositionV2
@@ -37,19 +33,13 @@ DFRobot_IRPositionV2::DFRobot_IRPositionV2()
  * @param pWire Pointer to `TwoWire` (NULL uses `Wire`).
  * @param addr7bit 7-bit I2C address.
  */
-DFRobot_IRPositionV2::DFRobot_IRPositionV2(TwoWire *pWire, uint8_t addr7bit)
-: _pWire(pWire ? pWire : &Wire),
-  _addr7bit(addr7bit)
-{
-}
+DFRobot_IRPositionV2::DFRobot_IRPositionV2(TwoWire *pWire, uint8_t addr7bit) : _pWire(pWire ? pWire : &Wire), _addr7bit(addr7bit) {}
 
 /**
  * @fn DFRobot_IRPositionV2::~DFRobot_IRPositionV2
  * @brief Destructor of DFRobot_IRPositionV2 class
  */
-DFRobot_IRPositionV2::~DFRobot_IRPositionV2()
-{
-}
+DFRobot_IRPositionV2::~DFRobot_IRPositionV2() {}
 
 /**
  * @fn DFRobot_IRPositionV2::begin
@@ -92,12 +82,12 @@ int DFRobot_IRPositionV2::readReg(uint16_t reg, void *data, uint16_t len)
   _pWire->beginTransmission(_addr7bit);
   _pWire->write((uint8_t)(reg & 0xFF));
   _pWire->write((uint8_t)((reg >> 8) & 0xFF));
-  uint8_t err = _pWire->endTransmission(false); // repeated start
+  uint8_t err = _pWire->endTransmission(false);    // repeated start
   if (err != 0) {
     return -1;
   }
 
-  uint8_t *p = (uint8_t *)data;
+  uint8_t *p         = (uint8_t *)data;
   uint16_t remaining = len;
 
   while (remaining > 0) {
@@ -136,8 +126,8 @@ int DFRobot_IRPositionV2::writeReg(uint16_t reg, const void *data, uint16_t len)
     return -1;
   }
 
-  const uint8_t *p = (const uint8_t *)data;
-  uint16_t remaining = len;
+  const uint8_t *p         = (const uint8_t *)data;
+  uint16_t       remaining = len;
 
   while (remaining > 0) {
     _pWire->beginTransmission(_addr7bit);
@@ -234,36 +224,32 @@ bool DFRobot_IRPositionV2::setMaxTrackingNumber(uint8_t num)
 
 /**
  * @fn DFRobot_IRPositionV2::setExposure
- * @brief Write exposure, commit, and optional delay for readback
+ * @brief Write exposure, commit it, and wait a fixed 100 ms
  * @param expo 16-bit exposure value, clamped to the datasheet minimum of 100.
- * @param settleMs Milliseconds to wait after commit (0 skips `delay`).
- * @return `true` if both writes succeed.
+ * @return `true` if both writes succeed. The wait is skipped when a write fails.
  */
-bool DFRobot_IRPositionV2::setExposure(uint16_t expo, uint16_t settleMs)
+bool DFRobot_IRPositionV2::setExposure(uint16_t expo)
 {
-  if (expo < IRPOS_V2_EXPOSURE_MIN) {
-    expo = IRPOS_V2_EXPOSURE_MIN;
+  if (expo < EXPOSURE_MIN) {
+    expo = EXPOSURE_MIN;
   }
 
   uint8_t expoBuf[2];
-  expoBuf[0] = (uint8_t)(expo & 0xFF);         // LSB
-  expoBuf[1] = (uint8_t)((expo >> 8) & 0xFF); // MSB
+  expoBuf[0] = (uint8_t)(expo & 0xFF);           // LSB
+  expoBuf[1] = (uint8_t)((expo >> 8) & 0xFF);    // MSB
 
   uint16_t regExpo = REG_PARAM_BASE + REG_W_B_EXPO_LSB;
   if (writeReg(regExpo, expoBuf, 2) != 0) {
     return false;
   }
 
-  uint8_t commit = 0x01;
+  uint8_t  commit    = 0x01;
   uint16_t regCommit = REG_PARAM_BASE + REG_W_B_EXPO_COMMIT;
   if (writeReg(regCommit, &commit, 1) != 0) {
     return false;
   }
 
-  /* Sensor readback registers may update with a short delay after commit. */
-  if (settleMs > 0) {
-    delay(settleMs);
-  }
+  delay(EXPOSURE_APPLY_MS);
   return true;
 }
 
@@ -275,8 +261,8 @@ bool DFRobot_IRPositionV2::setExposure(uint16_t expo, uint16_t settleMs)
  */
 bool DFRobot_IRPositionV2::getExposure(uint16_t &expo)
 {
-  uint8_t expoBuf[2] = { 0 };
-  uint16_t regExpo = REG_PARAM_BASE + REG_R_B_EXPO_LSB;
+  uint8_t  expoBuf[2] = { 0 };
+  uint16_t regExpo    = REG_PARAM_BASE + REG_R_B_EXPO_LSB;
   if (readReg(regExpo, expoBuf, 2) != 0) {
     return false;
   }
@@ -289,10 +275,9 @@ bool DFRobot_IRPositionV2::getExposure(uint16_t &expo)
  * @fn DFRobot_IRPositionV2::setI2CAddress
  * @brief Save a new 7-bit bridge address to flash; active after reset or power cycle
  * @param addr7bit New 7-bit address, valid range 0x08–0x77.
- * @param settleMs Maximum milliseconds to wait for the save status to leave pending.
- * @return `true` if the bridge reports save status OK.
+ * @return `true` if the bridge reports save status OK within `I2C_ADDR_SAVE_MAX_MS`.
  */
-bool DFRobot_IRPositionV2::setI2CAddress(uint8_t addr7bit, uint16_t settleMs)
+bool DFRobot_IRPositionV2::setI2CAddress(uint8_t addr7bit)
 {
   if (!irpos_v2_isValidI2CAddress(addr7bit)) {
     return false;
@@ -307,7 +292,7 @@ bool DFRobot_IRPositionV2::setI2CAddress(uint8_t addr7bit, uint16_t settleMs)
     return false;
   }
 
-  uint8_t status = REG_I2C_ADDR_STATUS_FLASH_FAIL;
+  uint8_t  status  = REG_I2C_ADDR_STATUS_FLASH_FAIL;
   uint32_t startMs = millis();
   do {
     if (!getI2CAddressStatus(status)) {
@@ -316,11 +301,8 @@ bool DFRobot_IRPositionV2::setI2CAddress(uint8_t addr7bit, uint16_t settleMs)
     if (status != REG_I2C_ADDR_STATUS_PENDING) {
       break;
     }
-    if (settleMs == 0) {
-      break;
-    }
     delay(5);
-  } while ((uint32_t)(millis() - startMs) < settleMs);
+  } while ((uint32_t)(millis() - startMs) < I2C_ADDR_SAVE_MAX_MS);
 
   return (status == REG_I2C_ADDR_STATUS_OK);
 }
@@ -345,7 +327,7 @@ bool DFRobot_IRPositionV2::getI2CAddress(uint8_t &addr7bit)
  */
 bool DFRobot_IRPositionV2::setIndicator(bool status)
 {
-  uint8_t val = status ? 0x01 : 0x00;
+  uint8_t  val = status ? 0x01 : 0x00;
   uint16_t reg = REG_PARAM_BASE + REG_INDICATOR;
   return (writeReg(reg, &val, 1) == 0);
 }
@@ -379,14 +361,14 @@ bool DFRobot_IRPositionV2::updateFrame()
  * @param obj Output structure.
  * @return `true` if `index` is in range.
  */
-bool DFRobot_IRPositionV2::readObject(int index, IRPosV2_ObjData &obj)
+bool DFRobot_IRPositionV2::readObject(int index, ObjData &obj)
 {
   if (index < 0 || index >= REG_FRAME_COUNT) {
     return false;
   }
 
   const uint8_t *p = &_frame[index * REG_FRAME_LEN];
-  memcpy(&obj, p, sizeof(IRPosV2_ObjData));
+  memcpy(&obj, p, sizeof(ObjData));
   return true;
 }
 
@@ -398,14 +380,14 @@ bool DFRobot_IRPositionV2::readObject(int index, IRPosV2_ObjData &obj)
  */
 uint8_t *DFRobot_IRPositionV2::getIRCoordinate(int IRnum)
 {
-  IRPosV2_ObjData obj;
+  ObjData obj;
   if (!readObject(IRnum, obj)) {
     _coordBuf[0] = _coordBuf[1] = _coordBuf[2] = _coordBuf[3] = 0;
     return _coordBuf;
   }
 
-  uint16_t cx = irpos_v2_getCx(&obj);
-  uint16_t cy = irpos_v2_getCy(&obj);
+  uint16_t cx = objectCx(obj);
+  uint16_t cy = objectCy(obj);
 
   _coordBuf[0] = (uint8_t)(cx & 0xFF);
   _coordBuf[1] = (uint8_t)((cx >> 8) & 0x0F);
@@ -423,7 +405,7 @@ uint8_t *DFRobot_IRPositionV2::getIRCoordinate(int IRnum)
  */
 uint8_t *DFRobot_IRPositionV2::getIRBound(int IRnum)
 {
-  IRPosV2_ObjData obj;
+  ObjData obj;
   if (!readObject(IRnum, obj)) {
     _boundBuf[0] = _boundBuf[1] = _boundBuf[2] = _boundBuf[3] = 0;
     return _boundBuf;
@@ -450,7 +432,7 @@ uint8_t *DFRobot_IRPositionV2::getIRBound(int IRnum)
  */
 uint8_t DFRobot_IRPositionV2::getAverageBrightness(int IRnum)
 {
-  IRPosV2_ObjData obj;
+  ObjData obj;
   if (!readObject(IRnum, obj)) {
     return 0;
   }
@@ -465,7 +447,7 @@ uint8_t DFRobot_IRPositionV2::getAverageBrightness(int IRnum)
  */
 uint8_t DFRobot_IRPositionV2::getMaxBrightness(int IRnum)
 {
-  IRPosV2_ObjData obj;
+  ObjData obj;
   if (!readObject(IRnum, obj)) {
     return 0;
   }
@@ -480,9 +462,9 @@ uint8_t DFRobot_IRPositionV2::getMaxBrightness(int IRnum)
  */
 uint8_t DFRobot_IRPositionV2::getRadius(int IRnum)
 {
-  IRPosV2_ObjData obj;
+  ObjData obj;
   if (!readObject(IRnum, obj)) {
     return 0;
   }
-  return irpos_v2_getRadius(&obj);
+  return objectRadius(obj);
 }

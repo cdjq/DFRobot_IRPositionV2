@@ -19,8 +19,6 @@ DFRobot_IRPositionV2 irPosition(&Wire, 0x58);
 /** Demo exposure: B_expo[15:0] (range 100–65535). Adjust for your lighting. */
 static const uint16_t kDemoExposure = 0x0080;
 
-static uint32_t s_lastExpoPrintMs = 0;
-
 /**
  * @brief Initialize serial, sensor, and optional parameters.
  * @details Parameter comments list valid ranges; values below are examples only.
@@ -29,7 +27,7 @@ void setup()
 {
   Serial.begin(115200);
   while (!Serial) {
-    ; // USB-Leonardo/M0: wait for Serial
+    ;    // USB-Leonardo/M0: wait for Serial
   }
 
   Serial.println(F("DFRobot IRPosition V2 - Get Position Example"));
@@ -48,12 +46,12 @@ void setup()
    * - setScaleResolution:       each axis 0–4095 (maps native 98×98; e.g. 2490 ≈ 30× scale)
    * - setMaxTrackingNumber:     1–16
    */
-  irPosition.setIRBrightnessThreshold(0xEE);   // 0–255
-  irPosition.setIRDetectionNoise(0xFF);        // 0–255
-  irPosition.setScaleResolution(2490, 2490);   // x,y each 0–4095
+  irPosition.setIRBrightnessThreshold(0xEE);    // 0–255
+  irPosition.setIRDetectionNoise(0xFF);         // 0–255
+  irPosition.setScaleResolution(2490, 2490);    // x,y each 0–4095
   irPosition.setMaxTrackingNumber(16);          // 1–16
 
-  // setExposure(expo): expo 100–65535; waits 10 ms after commit by default.
+  // setExposure(expo): expo 100–65535. Waits a fixed 100 ms after a successful write.
   if (irPosition.setExposure(kDemoExposure)) {
     Serial.print(F("setExposure OK, wrote 0x"));
     Serial.println(kDemoExposure, HEX);
@@ -63,7 +61,7 @@ void setup()
 }
 
 /**
- * @brief Read one frame, print all 16 slots, and periodically print exposure readback.
+ * @brief Read one frame and print all 16 slots.
  */
 void loop()
 {
@@ -106,17 +104,6 @@ void loop()
     Serial.print(F(","));
     Serial.print(bound[3]);
     Serial.println(F(")"));
-  }
-
-  if (millis() - s_lastExpoPrintMs >= 1000) {
-    s_lastExpoPrintMs = millis();
-    uint16_t expo = 0;
-    if (irPosition.getExposure(expo)) {
-      Serial.print(F("Exposure(readback)=0x"));
-      Serial.println(expo, HEX);
-    } else {
-      Serial.println(F("getExposure() failed."));
-    }
   }
 
   Serial.println(F("----------------------------------------------------------------"));
