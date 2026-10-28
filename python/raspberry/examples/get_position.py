@@ -8,7 +8,8 @@
 @n     Two display modes, selected by DISPLAY_MODE below:
 @n       DISPLAY_CONSOLE  -> print all 16 slots to the terminal every frame (works on headless / Lite systems)
 @n       DISPLAY_GUI      -> tkinter window that draws the spots on a 2D canvas, with sliders for
-@n                           brightness threshold / noise threshold / exposure (needs a desktop or ssh -X)
+@n                           brightness threshold / noise threshold / exposure (needs a desktop or ssh -X).
+@n                           The same 16 slots are also printed to the terminal.
 @n     If tkinter or a display is not available the example falls back to the console mode automatically.
 @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
 @license     The MIT License (MIT)
@@ -80,6 +81,11 @@ def setup():
     print("set_exposure OK, wrote 0x%04X" % DEMO_EXPOSURE)
   else:
     print("set_exposure failed (I2C).")
+  expo = ir_position.get_exposure()
+  if expo >= 0:
+    print("Exposure(readback)=0x%04X" % expo)
+  else:
+    print("get_exposure() failed.")
 
 
 def is_valid_spot(x, y, avg_b):
@@ -91,13 +97,13 @@ def is_valid_spot(x, y, avg_b):
 
 
 # ---------------------------------------------------------------- console mode
-def loop():
-  ## Read one frame, then access all 16 slots from the cached buffer
-  if ir_position.update() == False:
-    print("update() failed - frame read error.")
-    time.sleep(0.5)
-    return
+LOG_INTERVAL_S = 0.1
 
+
+def print_frame():
+  '''!
+  @brief Print all 16 slots from the last update() to the terminal
+  '''
   for i in range(16):
     # IR index i: 0-15
     x, y = ir_position.get_ir_coordinate(i)
@@ -106,9 +112,18 @@ def loop():
     max_b = ir_position.get_max_brightness(i)
     rad = ir_position.get_radius(i)
     print("Obj[%2d] Cxy=(%4d,%4d) AvgB=%3d MaxB=%3d R=%2d Bound(U,D,L,R)=(%d,%d,%d,%d)" % (i, x, y, avg_b, max_b, rad, up, down, left, right))
-
   print("----------------------------------------------------------------")
-  time.sleep(0.1)
+
+
+def loop():
+  ## Read one frame, then access all 16 slots from the cached buffer
+  if ir_position.update() == False:
+    print("update() failed - frame read error.")
+    time.sleep(0.5)
+    return
+
+  print_frame()
+  time.sleep(LOG_INTERVAL_S)
 
 
 # ---------------------------------------------------------------- GUI mode
@@ -152,6 +167,7 @@ class PositionGUI:
     self.frames = 0
     self.fps = 0.0
     self.fps_t0 = time.time()
+    self.last_log = 0
 
     ## Left: canvas
     self.canvas = tk.Canvas(root, width=self.CANVAS_SIZE, height=self.CANVAS_SIZE, bg="#101418", highlightthickness=0)
@@ -237,6 +253,7 @@ class PositionGUI:
 
   def refresh(self):
     if ir_position.update() == False:
+      print("update() failed - frame read error.")
       self._set_status(False, "update() failed - frame read error")
       self.root.after(500, self.refresh)
       return
@@ -277,9 +294,14 @@ class PositionGUI:
     self.spot_text.config(state="disabled")
     self.lbl_count.config(text="Tracked spots: %d" % tracked)
 
+    ## Same log as the console mode, slower than the canvas refresh.
+    now = time.time()
+    if now - self.last_log >= LOG_INTERVAL_S:
+      self.last_log = now
+      print_frame()
+
     ## FPS
     self.frames += 1
-    now = time.time()
     if now - self.fps_t0 >= 1.0:
       self.fps = self.frames / (now - self.fps_t0)
       self.frames = 0

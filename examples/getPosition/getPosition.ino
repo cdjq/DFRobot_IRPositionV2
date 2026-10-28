@@ -58,6 +58,13 @@ void setup()
   } else {
     Serial.println(F("setExposure failed (I2C)."));
   }
+  uint16_t expo = 0;
+  if (irPosition.getExposure(expo)) {
+    Serial.print(F("Exposure(readback)=0x"));
+    Serial.println(expo, HEX);
+  } else {
+    Serial.println(F("getExposure() failed."));
+  }
 }
 
 /**
