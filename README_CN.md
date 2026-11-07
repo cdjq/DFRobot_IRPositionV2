@@ -2,56 +2,44 @@
 
 * [English Version](./README.md)
 
-红外定位模组（**SKU：SEN0701**）每帧最多跟踪 **16** 个红外光点，并给出每个光点的中心坐标、边界、亮度和半径。模组通过 **I2C** 连接，默认 7 位地址为 **0x58**。
+红外定位模组（SKU：SEN0701）每帧最多跟踪 16 个红外光点，并给出每个光点的中心坐标、边界、亮度和半径。模组通过 I2C 连接，默认 7 位地址为 0x58。
 
-**DFRobot_IRPositionV2** 用于在 Arduino 上驱动该模组。调用 `update()` 读取一帧后，可设置检测阈值、坐标缩放、曝光、最大跟踪数量、指示灯和模组 I2C 地址。
+接线（I2C）：
+
+- 红 → VCC（3.3V 或 5V，以模组规格为准）
+- 黑 → GND
+- 绿 → SCL
+- 黄 → SDA
+
+**DFRobot_IRPositionV2** 用于在 Arduino 上驱动该模组。
+
+## 产品链接（https://www.dfrobot.com.cn）
+
+SKU：SEN0701
 
 ## 目录
 
-* [简介](#简介)
-* [配置参数范围](#配置参数范围)
-* [安装](#安装)
-* [示例](#示例)
+* [概述](#概述)
+* [库安装](#库安装)
 * [方法](#方法)
 * [兼容性](#兼容性)
 * [历史](#历史)
-* [贡献者](#贡献者)
+* [创作者](#创作者)
 
-## 简介
+## 概述
 
-* 每帧最多跟踪 **16** 个红外光点（索引 **0–15**）。
-* 使用 **I2C** 通信，7 位从机地址为 **`0x58`**。`begin()` 内将 **`Wire`** 设为 **400 kHz**。
-* 每个目标可读取 **中心坐标（12 位缩放后）**、原生 **98×98** 网格上的 **边界**、**平均/最大亮度**、**半径**（打包字段低 4 位）。
-* 在读取任意目标数据前，请在循环中调用一次 **`update()`** 刷新内部帧缓存。
+本库用于读取红外光点，并设置检测阈值、坐标缩放、曝光、最大跟踪数量、指示灯和 I2C 地址。先调用 `begin()`，循环中调用一次 `update()` 后再读取各光点。示例 `getPosition` 打印坐标与亮度，示例 `setI2CAddress` 保存新的 7 位地址。
 
-## 配置参数范围
+## 库安装
 
-在示例或产品集成中调节参数时，建议遵循下表范围（具体效果以实机与固件为准）：
+这里有 2 种安装方法：
 
-| 项目 | 范围 / 说明 |
-| ---- | ----------- |
-| **I2C 地址** | 7 位 `0x58`；`DFRobot_IRPositionV2(TwoWire*, uint8_t)` 传入 **7 位**地址。 |
-| **`setI2CAddress(addr7bit)`** | `addr7bit`：**0x08–0x77**。保存到桥接芯片 flash，复位或重新上电后生效。保存完成即返回；地址非法、通信失败、flash 保存失败，或内部时限（200 ms）内仍未完成时返回 `false`。 |
-| **`setIRBrightnessThreshold(brightness)`** | `brightness`：**0–255**（文档/固件常见默认 **0x97**）。数值越高，对亮度要求越严。 |
-| **`setIRDetectionNoise(noise)`** | `noise`：**0–255**（常见默认 **0x0A**）。用于抑制噪声触发。 |
-| **`setScaleResolution(x, y)`** | 每轴 **0–4095**（超过会被库内限制为 4095）。将传感器原生分辨率映射到 12 位输出；从 **98×98** 约放大 30 倍时常用 **2490×2490**。 |
-| **`setMaxTrackingNumber(num)`** | `num`：**1–16**（库内会钳位）。 |
-| **`setExposure(expo)`** | `expo`：**100–65535**（低于 100 时库内会限制为 100，实际最大值还受帧周期限制）。两次写入都成功即返回 `true`，随后固定等待 **100 ms**。写入失败时不等待。需要当前值时调用 `getExposure()`。 |
-| **`getIRCoordinate(IRnum)`** | `IRnum`：**0–15**。返回打包的 **12 位 X/Y**，范围 **0–4095**（与 `setScaleResolution` 一致）。 |
-| **`getIRBound(IRnum)`** | `IRnum`：**0–15**。返回 **上、下、左、右**，单位为原生网格 **0–98**。 |
-| **`getAverageBrightness` / `getMaxBrightness`** | 返回值 **0–255**。 |
-| **`getRadius(IRnum)`** | 半径为 **4 位** 字段（一般可理解为 **0–15** 像素量级）。 |
+1. 在 Arduino 库管理器中搜索并安装 DFRobot_IRPositionV2。
+2. 下载库文件，解压到 Arduino 的 `libraries` 目录，然后打开 `examples` 目录运行示例。
 
-## 安装
+本库仅依赖 Arduino 核心与 `Wire`，无需其它第三方库。
 
-1. 下载本库到 `\Arduino\libraries`（或通过库管理器安装，若已发布），然后打开 `examples` 目录运行示例。
-2. 本库仅依赖 **Arduino** 核心与 **`Wire`**，无需其它第三方库。
-3. **树莓派 / Python** 版本位于 [`python/raspberry`](./python/raspberry/README_CN.md)，依赖 `smbus2`，提供与 Arduino 版一一对应的 snake_case 接口（示例 `get_position.py`、`set_i2c_address.py`）。
-
-## 示例
-
-* `getPosition`：读取红外目标坐标与亮度等数据。
-* `setI2CAddress`：保存新的 7 位桥接地址到 flash，成功后需要复位或重新上电。
+树莓派 / Python 版本位于 [`python/raspberry`](./python/raspberry/README_CN.md)，依赖 `smbus2`，接口为与 Arduino 版对应的 snake_case（示例 `get_position.py`、`set_i2c_address.py`）。
 
 ## 方法
 
@@ -80,39 +68,46 @@
   /**
    * @fn update
    * @brief 读取一整帧（16 对象 × 16 字节）到内部缓存。
+   * @n 每圈循环调用一次，再使用 getIRCoordinate / getIRBound / 亮度 / 半径接口。
    * @return 成功返回 true，I2C 失败返回 false。
    */
   bool update();
 
   /**
    * @fn setIRBrightnessThreshold
-   * @brief 设置红外光点亮度阈值（常见默认 0x97）。
-   * @param brightness 0–255。
+   * @brief 设置红外光点亮度阈值。
+   * @param brightness 阈值。
+   * @n 范围 0–255，常见出厂默认 0x97。
+   * @n 数值越高，亮度门槛越严，较暗的光点会被丢掉。
    * @return 成功返回 true，I2C 失败返回 false。
    */
   bool setIRBrightnessThreshold(uint8_t brightness);
 
   /**
    * @fn setIRDetectionNoise
-   * @brief 设置红外检测噪声阈值（常见默认 0x0A）。
-   * @param noise 0–255。
+   * @brief 设置红外检测噪声阈值。
+   * @param noise 噪声阈值。
+   * @n 范围 0–255，常见默认 0x0A，用于抑制噪声触发。
    * @return 成功返回 true，I2C 失败返回 false。
    */
   bool setIRDetectionNoise(uint8_t noise);
 
   /**
    * @fn setScaleResolution
-   * @brief 设置 X/Y 坐标缩放（原生 98×98；每轴最大 4095）。
-   * @param x_axis 0–4095。
-   * @param y_axis 0–4095。
+   * @brief 设置 X/Y 坐标缩放。
+   * @param x_axis X 轴缩放。
+   * @param y_axis Y 轴缩放。
+   * @n 每轴 0–4095，超过 4095 会被库限制为 4095。
+   * @n 将传感器原生 98×98 网格映射到 12 位输出。示例使用 2490×2490。
    * @return 成功返回 true，I2C 失败返回 false。
    */
   bool setScaleResolution(uint16_t x_axis, uint16_t y_axis);
 
   /**
    * @fn setMaxTrackingNumber
-   * @brief 设置最大跟踪目标数（常见默认 0x10，即 16）。
-   * @param num 1–16。
+   * @brief 设置最大跟踪目标数。
+   * @param num 最大目标数。
+   * @n 范围 1–16，库内会钳位。常见默认 0x10（16）。
    * @return 成功返回 true，I2C 失败返回 false。
    */
   bool setMaxTrackingNumber(uint8_t num);
@@ -120,8 +115,11 @@
   /**
    * @fn setExposure
    * @brief 写入 16 位曝光、提交，并固定等待 100 ms。
-   * @param expo 100–65535。低于 100 时库内会限制为 100，实际最大值还受帧周期限制。
-   * @return 两次写入都成功返回 true，I2C 失败返回 false。写入失败时不等待。
+   * @param expo 曝光值。
+   * @n 范围 100–65535。低于 100 时库内限制为 100。
+   * @n 实际最大值还受帧周期限制。
+   * @n 两次写入都成功后等待 100 ms；写入失败时不等待。
+   * @return 两次写入都成功返回 true，I2C 失败返回 false。
    */
   bool setExposure(uint16_t expo);
 
@@ -135,9 +133,12 @@
 
   /**
    * @fn setI2CAddress
-   * @brief 保存新的 7 位 I2C 地址到桥接芯片 flash，复位或重新上电后生效。
-   * @param addr7bit 新 7 位地址，范围 0x08–0x77。
-   * @return 保存成功返回 true；地址非法、I2C 失败、flash 失败或超时返回 false。
+   * @brief 将新的 7 位 I2C 地址保存到桥接芯片 flash。
+   * @param addr7bit 新的 7 位地址。
+   * @n 有效范围 0x08–0x77。
+   * @n 仅在复位或重新上电后生效。
+   * @n 地址非法、I2C 失败、flash 失败或超时（200 ms）时返回 false。
+   * @return 保存成功返回 true，否则返回 false。
    */
   bool setI2CAddress(uint8_t addr7bit);
 
@@ -151,9 +152,9 @@
 
   /**
    * @fn setIndicator
-   * @brief 打开/关闭传感器上的指示灯。
+   * @brief 打开或关闭板载指示灯。
    * @param status true 打开，false 关闭。
-   * @return 设置成功返回 true，I2C 失败返回 false。
+   * @return 成功返回 true，I2C 失败返回 false。
    */
   bool setIndicator(bool status);
 
@@ -175,44 +176,50 @@
 
   /**
    * @fn getAverageBrightness
+   * @brief 上一帧 `update()` 中所选光点的平均亮度。
    * @param IRnum 0–15。
-   * @return 平均亮度 0–255；索引非法时为 0。
+   * @n 返回 0–255；索引非法时返回 0。
+   * @return 平均亮度。
    */
   uint8_t getAverageBrightness(int IRnum);
 
   /**
    * @fn getMaxBrightness
+   * @brief 上一帧 `update()` 中所选光点的最大亮度。
    * @param IRnum 0–15。
-   * @return 最大亮度 0–255；索引非法时为 0。
+   * @n 返回 0–255；索引非法时返回 0。
+   * @return 最大亮度。
    */
   uint8_t getMaxBrightness(int IRnum);
 
   /**
    * @fn getRadius
+   * @brief 上一帧 `update()` 中所选光点的半径。
    * @param IRnum 0–15。
-   * @return 半径（打包字段低 4 位）；索引非法时为 0。
+   * @n 打包字段的低 4 位，一般为 0–15。索引非法时返回 0。
+   * @return 半径。
    */
   uint8_t getRadius(int IRnum);
 ```
 
 ## 兼容性
 
-| 主板               | 表现良好 | 表现异常 | 未测试 | 备注 |
-| ------------------ | :------: | :------: | :----: | ---- |
-| Arduino Uno        |    √     |          |        |      |
-| Arduino Leonardo   |    √     |          |        |      |
-| Arduino MEGA2560   |    √     |          |        |      |
-| FireBeetle-ESP32   |    √     |          |        |      |
-| ESP8266            |    √     |          |        |      |
-| FireBeetle-M0      |    √     |          |        |      |
-| Micro:bit          |    √     |          |        |      |
-| Raspberry Pi       |    √     |          |        |      |
+| 主板               | 通过 | 未通过 | 未测试 | 备注 |
+| ------------------ | :--: | :----: | :----: | ---- |
+| Arduino Uno        |  √   |        |        |      |
+| Arduino Leonardo   |  √   |        |        |      |
+| Arduino MEGA2560   |  √   |        |        |      |
+| FireBeetle-ESP32   |  √   |        |        |      |
+| ESP8266            |  √   |        |        |      |
+| FireBeetle-M0      |  √   |        |        |      |
+| Micro:bit          |  √   |        |        |      |
+| Raspberry Pi       |  √   |        |        |      |
 
 ## 历史
 
-* Date 2026-04-13
+* Date 2026-11-07
 * Version V1.0.0
 
-## 贡献者
+## 创作者
 
-Written by thdyyl(yuanlong.yu@dfrobot.com), 2026-04-13 (Welcome to our [website](https://www.dfrobot.com/))
+Written by thdyyl(yuanlong.yu@dfrobot.com), 2026-11-07. (Welcome to our [website](https://www.dfrobot.com/))

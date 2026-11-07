@@ -2,12 +2,18 @@
 '''!
 @file  set_i2c_address.py
 @brief This example saves a new bridge I2C address to flash.
+@n     Wiring (I2C, bus=1, 7-bit address 0x58):
+@n     Red → VCC (3.3V or 5V, per the module rating)
+@n     Black → GND
+@n     Green → SCL
+@n     Yellow → SDA
 @n     The new address takes effect after reset or power cycle.
+@n     CURRENT_ADDR and NEW_ADDR must both be in 0x08-0x77.
 @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
 @license     The MIT License (MIT)
 @author      [thdyyl](yuanlong.yu@dfrobot.com)
 @version     V1.0.0
-@date        2026-10-26
+@date        2026-11-07
 @url         https://github.com/DFRobot/DFRobot_IRPositionV2
 '''
 
@@ -21,8 +27,9 @@ import time
 from DFRobot_IRPositionV2 import *
 
 '''
-  CURRENT_ADDR -> address the module responds to now (factory default 0x58)
-  NEW_ADDR     -> address to save, valid range 0x08-0x77
+  Wiring: Red → VCC, Black → GND, Green → SCL, Yellow → SDA.
+  CURRENT_ADDR -> address the module responds to now (factory default 0x58, valid 0x08-0x77)
+  NEW_ADDR     -> address to save, valid range 0x08-0x77. Applied after reset or power cycle.
 '''
 I2C_1 = 0x01
 CURRENT_ADDR = 0x58

@@ -9,7 +9,7 @@
 @license     The MIT License (MIT)
 @author      [thdyyl](yuanlong.yu@dfrobot.com)
 @version     V1.0.0
-@date        2026-10-26
+@date        2026-11-07
 @url         https://github.com/DFRobot/DFRobot_IRPositionV2
 '''
 
@@ -77,7 +77,7 @@ class DFRobot_IRPositionV2:
   _REG_I2C_ADDR_STATUS_FLASH_FAIL = 0x02
   _REG_I2C_ADDR_STATUS_PENDING = 0x03
 
-  ## Byte offsets inside one 16-byte object slot (matches PAJ7025R2 regbank05_t).
+  ## Byte offsets inside one 16-byte object slot (matches sObjData_t / PAJ7025R2 regbank05).
   _OBJ_AREA_07_00 = 0  # Area[7:0]
   _OBJ_AREA_13_08 = 1  # Area[13:8], valid in lower 6 bits
   _OBJ_CX_07_00 = 2  # Cx[7:0]
@@ -122,10 +122,8 @@ class DFRobot_IRPositionV2:
   def update(self):
     '''!
     @brief Read one full frame (16 objects x 16 bytes) into an internal buffer
-    @details Call once per loop before get_ir_coordinate() / brightness accessors to minimize I2C traffic.
-    @return Return update status
-    @retval True  Succeed
-    @retval False Failed, I2C error
+    @n Call once per loop before get_ir_coordinate / get_ir_bound / brightness / radius accessors.
+    @return True on success, False on I2C error
     '''
     frame = self._read_reg(self._REG_FRAMES_START, self._REG_FRAME_SIZE)
     if frame is None:
@@ -135,8 +133,10 @@ class DFRobot_IRPositionV2:
 
   def set_ir_brightness_threshold(self, brightness):
     '''!
-    @brief Set the IR spot brightness threshold (factory default in firmware is typically 0x97)
-    @param brightness Range 0-255, higher is a stricter brightness gate
+    @brief Set the IR spot brightness threshold
+    @param brightness Threshold value
+    @n Range 0-255; typical factory default 0x97
+    @n A higher value is a stricter brightness gate, and dimmer spots are dropped
     @return True on success, False on I2C error
     '''
     brightness = self._clamp(brightness, 0, 255)
@@ -144,8 +144,9 @@ class DFRobot_IRPositionV2:
 
   def set_ir_detection_noise(self, noise):
     '''!
-    @brief Set the IR detection noise threshold (default is often 0x0A)
-    @param noise Range 0-255
+    @brief Set the IR detection noise threshold
+    @param noise Noise threshold
+    @n Range 0-255; typical default 0x0A. Used to suppress noise triggers
     @return True on success, False on I2C error
     '''
     noise = self._clamp(noise, 0, 255)
@@ -153,9 +154,11 @@ class DFRobot_IRPositionV2:
 
   def set_scale_resolution(self, x_axis, y_axis):
     '''!
-    @brief Set X/Y output scaling (sensor native grid is 98x98; commonly scaled up, max 4095 per axis)
-    @param x_axis Range 0-4095, values above 4095 are clamped
-    @param y_axis Range 0-4095, values above 4095 are clamped
+    @brief Set X/Y output scaling
+    @param x_axis X scale
+    @param y_axis Y scale
+    @n Each axis is 0-4095. Values above 4095 are clamped
+    @n Maps the native 98x98 sensor grid to 12-bit outputs. Examples use 2490x2490
     @return True on success, False on I2C error
     '''
     x_axis = self._clamp(x_axis, 0, 4095)
@@ -165,8 +168,9 @@ class DFRobot_IRPositionV2:
 
   def set_max_tracking_number(self, num):
     '''!
-    @brief Set the maximum number of IR spots to track (default often 0x10 = 16)
-    @param num Range 1-16, clamped by the library
+    @brief Set the maximum number of IR spots to track
+    @param num Maximum object count
+    @n Range 1-16, clamped by the library. Typical default is 0x10 (16)
     @return True on success, False on I2C error
     '''
     num = self._clamp(num, 1, 16)
@@ -175,8 +179,11 @@ class DFRobot_IRPositionV2:
   def set_exposure(self, expo):
     '''!
     @brief Write 16-bit exposure, commit it, and wait a fixed 100 ms
-    @param expo Range 100-65535. Values below 100 are clamped to 100; effective maximum depends on frame period
-    @return True if both writes succeed, False on I2C error. The wait is skipped when a write fails.
+    @param expo Exposure value
+    @n Range 100-65535. Values below 100 are clamped to 100
+    @n The effective maximum depends on the frame period
+    @n On success the call waits 100 ms. The wait is skipped when a write fails
+    @return True if both writes succeed, False on I2C error
     '''
     expo = self._clamp(expo, self._EXPOSURE_MIN, 0xFFFF)
     if not self._write_reg(self._REG_PARAM_BASE + self._REG_W_B_EXPO_LSB, [expo & 0xFF, (expo >> 8) & 0xFF]):
@@ -198,9 +205,12 @@ class DFRobot_IRPositionV2:
 
   def set_i2c_address(self, addr7bit):
     '''!
-    @brief Save a new 7-bit I2C address to bridge flash; it takes effect after reset or power cycle
-    @param addr7bit New 7-bit address, valid range 0x08-0x77
-    @return True if the address is saved, False on invalid address, I2C error, flash failure, or timeout
+    @brief Save a new 7-bit I2C address to bridge flash
+    @param addr7bit New 7-bit address
+    @n Valid range 0x08-0x77
+    @n Takes effect only after reset or power cycle
+    @n Returns False on an invalid address, I2C error, flash failure, or timeout (200 ms)
+    @return True if the address is saved, False otherwise
     '''
     if addr7bit < self._I2C_ADDR_MIN or addr7bit > self._I2C_ADDR_MAX:
       return False
@@ -265,9 +275,10 @@ class DFRobot_IRPositionV2:
 
   def get_average_brightness(self, ir_num):
     '''!
-    @brief Average brightness of the selected spot in the last frame
+    @brief Average brightness of the selected spot in the last update() frame
     @param ir_num Index 0-15
-    @return Return brightness 0-255, 0 if the index is invalid
+    @n Returns 0-255, or 0 if the index is invalid
+    @return Average brightness
     '''
     obj = self._read_object(ir_num)
     if obj is None:
@@ -276,9 +287,10 @@ class DFRobot_IRPositionV2:
 
   def get_max_brightness(self, ir_num):
     '''!
-    @brief Peak brightness of the selected spot in the last frame
+    @brief Peak brightness of the selected spot in the last update() frame
     @param ir_num Index 0-15
-    @return Return brightness 0-255, 0 if the index is invalid
+    @n Returns 0-255, or 0 if the index is invalid
+    @return Max brightness
     '''
     obj = self._read_object(ir_num)
     if obj is None:
@@ -287,9 +299,10 @@ class DFRobot_IRPositionV2:
 
   def get_radius(self, ir_num):
     '''!
-    @brief Radius (pixels) of the selected spot from the last frame
+    @brief Radius of the selected spot in the last update() frame
     @param ir_num Index 0-15
-    @return Return radius (low 4 bits of the packed field), 0 if the index is invalid
+    @n Low 4 bits of the packed radius field, typically 0-15. Returns 0 if the index is invalid
+    @return Radius value
     '''
     obj = self._read_object(ir_num)
     if obj is None:

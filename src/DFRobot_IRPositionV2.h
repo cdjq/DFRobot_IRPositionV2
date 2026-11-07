@@ -6,7 +6,7 @@
  * @License     The MIT License (MIT)
  * @author [thdyyl](yuanlong.yu@dfrobot.com)
  * @version  V1.0
- * @date  2026-04-13
+ * @date  2026-11-07
  * @url         https://github.com/DFRobot/DFRobot_IRPositionV2
  */
 #ifndef __DFROBOT_IRPOSITIONV2_H
@@ -51,40 +51,46 @@ public:
   /**
    * @fn update
    * @brief Read one full frame (16 objects × 16 bytes) into an internal buffer.
-   * @details Call once per loop before `getIRCoordinate()` / brightness accessors to minimize I2C traffic.
+   * @n Call once per loop before `getIRCoordinate` / `getIRBound` / brightness / radius accessors.
    * @return `true` on success, `false` on I2C error.
    */
   bool update();
 
   /**
    * @fn setIRBrightnessThreshold
-   * @brief Set the IR spot brightness threshold (factory default in firmware is typically `0x97`).
-   * @param brightness Range 0–255.
+   * @brief Set the IR spot brightness threshold.
+   * @param brightness Threshold value.
+   * @n Range 0–255; typical factory default `0x97`.
+   * @n A higher value is a stricter brightness gate, and dimmer spots are dropped.
    * @return `true` on success, `false` on I2C error.
    */
   bool setIRBrightnessThreshold(uint8_t brightness);
 
   /**
    * @fn setIRDetectionNoise
-   * @brief Set the IR detection noise threshold (default is often `0x0A`).
-   * @param noise Range 0–255.
+   * @brief Set the IR detection noise threshold.
+   * @param noise Noise threshold.
+   * @n Range 0–255; typical default `0x0A`. Used to suppress noise triggers.
    * @return `true` on success, `false` on I2C error.
    */
   bool setIRDetectionNoise(uint8_t noise);
 
   /**
    * @fn setScaleResolution
-   * @brief Set X/Y output scaling (sensor native grid is 98×98; commonly scaled up, max 4095 per axis).
-   * @param x_axis Range 0–4095.
-   * @param y_axis Range 0–4095.
+   * @brief Set X/Y output scaling.
+   * @param x_axis X scale.
+   * @param y_axis Y scale.
+   * @n Each axis is 0–4095. Values above 4095 are clamped.
+   * @n Maps the native 98×98 sensor grid to 12-bit outputs. Examples use 2490×2490.
    * @return `true` on success, `false` on I2C error.
    */
   bool setScaleResolution(uint16_t x_axis, uint16_t y_axis);
 
   /**
    * @fn setMaxTrackingNumber
-   * @brief Set the maximum number of IR spots to track (default often `0x10` = 16).
-   * @param num Range 1–16.
+   * @brief Set the maximum number of IR spots to track.
+   * @param num Maximum object count.
+   * @n Range 1–16, clamped by the library. Typical default is `0x10` (16).
    * @return `true` on success, `false` on I2C error.
    */
   bool setMaxTrackingNumber(uint8_t num);
@@ -92,8 +98,11 @@ public:
   /**
    * @fn setExposure
    * @brief Write 16-bit exposure, commit it, and wait a fixed 100 ms.
-   * @param expo Range 100–65535. Values below 100 are clamped to 100; effective maximum depends on frame period.
-   * @return `true` if both writes succeed, `false` on I2C error. The wait is skipped when a write fails.
+   * @param expo Exposure value.
+   * @n Range 100–65535. Values below 100 are clamped to 100.
+   * @n The effective maximum depends on the frame period.
+   * @n On success the call waits 100 ms. The wait is skipped when a write fails.
+   * @return `true` if both writes succeed, `false` on I2C error.
    */
   bool setExposure(uint16_t expo);
 
@@ -107,9 +116,12 @@ public:
 
   /**
    * @fn setI2CAddress
-   * @brief Save a new 7-bit I2C address to bridge flash; it takes effect after reset or power cycle.
-   * @param addr7bit New 7-bit address, valid range 0x08–0x77.
-   * @return `true` if the address is saved, `false` on invalid address, I2C error, flash failure, or timeout.
+   * @brief Save a new 7-bit I2C address to bridge flash.
+   * @param addr7bit New 7-bit address.
+   * @n Valid range 0x08–0x77.
+   * @n Takes effect only after reset or power cycle.
+   * @n Returns false on an invalid address, I2C error, flash failure, or timeout (200 ms).
+   * @return `true` if the address is saved, `false` otherwise.
    */
   bool setI2CAddress(uint8_t addr7bit);
 
@@ -123,9 +135,9 @@ public:
 
   /**
    * @fn setIndicator
-   * @brief Set turn on/off the indicator of the sensor
+   * @brief Turn the on-board indicator LED on or off.
    * @param status `true` to turn on, `false` to turn off.
-   * @return: whether set indicator on/off success
+   * @return `true` on success, `false` on I2C error.
    */
   bool setIndicator(bool status);
 
@@ -147,25 +159,28 @@ public:
 
   /**
    * @fn getAverageBrightness
-   * @brief Average brightness of the selected spot in the last frame.
+   * @brief Average brightness of the selected spot in the last `update()` frame.
    * @param IRnum Index 0–15.
-   * @return Brightness byte, or 0 if the index is invalid.
+   * @n Returns 0–255, or 0 if the index is invalid.
+   * @return Average brightness byte.
    */
   uint8_t getAverageBrightness(int IRnum);
 
   /**
    * @fn getMaxBrightness
-   * @brief Peak brightness of the selected spot in the last frame.
+   * @brief Peak brightness of the selected spot in the last `update()` frame.
    * @param IRnum Index 0–15.
-   * @return Brightness byte, or 0 if the index is invalid.
+   * @n Returns 0–255, or 0 if the index is invalid.
+   * @return Max brightness byte.
    */
   uint8_t getMaxBrightness(int IRnum);
 
   /**
    * @fn getRadius
-   * @brief Radius (pixels) of the selected spot from the last frame.
+   * @brief Radius of the selected spot in the last `update()` frame.
    * @param IRnum Index 0–15.
-   * @return Radius, or 0 if the index is invalid.
+   * @n Low 4 bits of the packed radius field, typically 0–15. Returns 0 if the index is invalid.
+   * @return Radius value.
    */
   uint8_t getRadius(int IRnum);
 
@@ -217,32 +232,33 @@ private:
   static const uint8_t REG_I2C_ADDR_STATUS_PENDING    = 0x03;
 
   /**
-   * @brief One tracked object, 16 bytes (matches PAJ7025R2 `regbank05_t`).
+   * @struct sObjData_t
+   * @brief One tracked IR object, 16 bytes (matches PAJ7025R2 regbank05 layout).
    */
-  struct __attribute__((packed)) ObjData {
-    uint8_t area_07_00;    ///< Area[7:0]
-    uint8_t area_13_08;    ///< Area[13:8], valid in lower 6 bits
-    uint8_t cx_07_00;      ///< Cx[7:0]
-    uint8_t cx_11_08;      ///< Cx[11:8], valid in lower 4 bits
-    uint8_t cy_07_00;      ///< Cy[7:0]
-    uint8_t cy_11_08;      ///< Cy[11:8], valid in lower 4 bits
-    uint8_t avg_brightness;
-    uint8_t max_brightness;
-    uint8_t radius_range;     ///< bits[3:0]=radius, bits[7:4]=range
-    uint8_t boundary_left;    ///< bits[6:0]
-    uint8_t boundary_right;
-    uint8_t boundary_up;
-    uint8_t boundary_down;
-    uint8_t aspect_ratio;
-    uint8_t vx;
-    uint8_t vy;
+  struct __attribute__((packed)) sObjData_t {
+    uint8_t area_07_00;        ///< Area[7:0]
+    uint8_t area_13_08;        ///< Area[13:8], valid in lower 6 bits
+    uint8_t cx_07_00;          ///< Cx[7:0]
+    uint8_t cx_11_08;          ///< Cx[11:8], valid in lower 4 bits
+    uint8_t cy_07_00;          ///< Cy[7:0]
+    uint8_t cy_11_08;          ///< Cy[11:8], valid in lower 4 bits
+    uint8_t avg_brightness;    ///< Average brightness 0–255
+    uint8_t max_brightness;    ///< Peak brightness 0–255
+    uint8_t radius_range;      ///< bits[3:0]=radius, bits[7:4]=range
+    uint8_t boundary_left;     ///< Left boundary, bits[6:0], native 0–98
+    uint8_t boundary_right;    ///< Right boundary, bits[6:0]
+    uint8_t boundary_up;       ///< Up boundary, bits[6:0]
+    uint8_t boundary_down;     ///< Down boundary, bits[6:0]
+    uint8_t aspect_ratio;      ///< Aspect ratio field
+    uint8_t vx;                ///< Velocity X
+    uint8_t vy;                ///< Velocity Y
   };
 
   /**
    * @fn objectCx
    * @brief Extract 12-bit center X from packed object fields.
    */
-  static uint16_t objectCx(const ObjData &obj)
+  static uint16_t objectCx(const sObjData_t &obj)
   {
     return (uint16_t)obj.cx_07_00 | ((uint16_t)(obj.cx_11_08 & 0x0F) << 8);
   }
@@ -251,7 +267,7 @@ private:
    * @fn objectCy
    * @brief Extract 12-bit center Y from packed object fields.
    */
-  static uint16_t objectCy(const ObjData &obj)
+  static uint16_t objectCy(const sObjData_t &obj)
   {
     return (uint16_t)obj.cy_07_00 | ((uint16_t)(obj.cy_11_08 & 0x0F) << 8);
   }
@@ -260,7 +276,7 @@ private:
    * @fn objectRadius
    * @brief Extract 4-bit radius from `radius_range`.
    */
-  static uint8_t objectRadius(const ObjData &obj)
+  static uint8_t objectRadius(const sObjData_t &obj)
   {
     return obj.radius_range & 0x0F;
   }
@@ -299,7 +315,7 @@ private:
    * @param obj Output structure.
    * @return `true` if `index` is in range.
    */
-  bool readObject(int index, ObjData &obj);
+  bool readObject(int index, sObjData_t &obj);
 
   /**
    * @fn getI2CAddressStatus

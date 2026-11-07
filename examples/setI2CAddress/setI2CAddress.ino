@@ -1,12 +1,20 @@
 /*!
  * @file setI2CAddress.ino
  * @brief Example: save a new bridge I2C address to flash.
- * @details The new address takes effect after reset or power cycle.
+ * @n Wiring (I2C, default Wire, 7-bit address 0x58):
+ * @n Red → VCC (3.3V or 5V, per the module rating)
+ * @n Black → GND
+ * @n Green → SCL
+ * @n Yellow → SDA
+ * @n Serial: 115200
+ * @n The new address takes effect after reset or power cycle.
+ * @details kCurrentAddr7bit is the address in use now. kNewAddr7bit is written to flash.
+ *          Both must be in 0x08–0x77.
  * @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @License     The MIT License (MIT)
  * @author [thdyyl](yuanlong.yu@dfrobot.com)
  * @version  V1.0.0
- * @date  2026-06-02
+ * @date  2026-11-07
  * @url         https://github.com/DFRobot/DFRobot_IRPositionV2
  */
 
@@ -14,9 +22,12 @@
 
 #include "DFRobot_IRPositionV2.h"
 
+/** Current 7-bit address. Default 0x58. Valid range 0x08–0x77. */
 static const uint8_t kCurrentAddr7bit = 0x58;
-static const uint8_t kNewAddr7bit     = 0x59;
+/** New 7-bit address. Default 0x59. Valid range 0x08–0x77. Applied after reset or power cycle. */
+static const uint8_t kNewAddr7bit = 0x59;
 
+/* Wiring: Red → VCC, Black → GND, Green → SCL, Yellow → SDA. */
 DFRobot_IRPositionV2 irPosition(&Wire, kCurrentAddr7bit);
 
 void setup()

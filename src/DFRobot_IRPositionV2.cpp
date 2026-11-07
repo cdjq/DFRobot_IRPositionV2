@@ -6,7 +6,7 @@
  * @License     The MIT License (MIT)
  * @author [thdyyl](yuanlong.yu@dfrobot.com)
  * @version  V1.0
- * @date  2026-04-13
+ * @date  2026-11-07
  * @url         https://github.com/DFRobot/DFRobot_IRPositionV2
  */
 
@@ -361,14 +361,14 @@ bool DFRobot_IRPositionV2::updateFrame()
  * @param obj Output structure.
  * @return `true` if `index` is in range.
  */
-bool DFRobot_IRPositionV2::readObject(int index, ObjData &obj)
+bool DFRobot_IRPositionV2::readObject(int index, sObjData_t &obj)
 {
   if (index < 0 || index >= REG_FRAME_COUNT) {
     return false;
   }
 
   const uint8_t *p = &_frame[index * REG_FRAME_LEN];
-  memcpy(&obj, p, sizeof(ObjData));
+  memcpy(&obj, p, sizeof(sObjData_t));
   return true;
 }
 
@@ -380,7 +380,7 @@ bool DFRobot_IRPositionV2::readObject(int index, ObjData &obj)
  */
 uint8_t *DFRobot_IRPositionV2::getIRCoordinate(int IRnum)
 {
-  ObjData obj;
+  sObjData_t obj;
   if (!readObject(IRnum, obj)) {
     _coordBuf[0] = _coordBuf[1] = _coordBuf[2] = _coordBuf[3] = 0;
     return _coordBuf;
@@ -405,7 +405,7 @@ uint8_t *DFRobot_IRPositionV2::getIRCoordinate(int IRnum)
  */
 uint8_t *DFRobot_IRPositionV2::getIRBound(int IRnum)
 {
-  ObjData obj;
+  sObjData_t obj;
   if (!readObject(IRnum, obj)) {
     _boundBuf[0] = _boundBuf[1] = _boundBuf[2] = _boundBuf[3] = 0;
     return _boundBuf;
@@ -432,7 +432,7 @@ uint8_t *DFRobot_IRPositionV2::getIRBound(int IRnum)
  */
 uint8_t DFRobot_IRPositionV2::getAverageBrightness(int IRnum)
 {
-  ObjData obj;
+  sObjData_t obj;
   if (!readObject(IRnum, obj)) {
     return 0;
   }
@@ -447,7 +447,7 @@ uint8_t DFRobot_IRPositionV2::getAverageBrightness(int IRnum)
  */
 uint8_t DFRobot_IRPositionV2::getMaxBrightness(int IRnum)
 {
-  ObjData obj;
+  sObjData_t obj;
   if (!readObject(IRnum, obj)) {
     return 0;
   }
@@ -462,7 +462,7 @@ uint8_t DFRobot_IRPositionV2::getMaxBrightness(int IRnum)
  */
 uint8_t DFRobot_IRPositionV2::getRadius(int IRnum)
 {
-  ObjData obj;
+  sObjData_t obj;
   if (!readObject(IRnum, obj)) {
     return 0;
   }

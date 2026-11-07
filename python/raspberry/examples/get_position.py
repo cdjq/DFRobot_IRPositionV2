@@ -2,8 +2,13 @@
 '''!
 @file  get_position.py
 @brief This example reads up to 16 IR objects from the SEN0701 module and shows coordinates and metrics.
-@n     Demonstrates begin(), optional parameter tuning (with valid ranges), update() per frame,
-@n     and per-object accessors. See README "Configuration parameter ranges" for limits.
+@n     Wiring (I2C, bus=1, 7-bit address 0x58):
+@n     Red → VCC (3.3V or 5V, per the module rating)
+@n     Black → GND
+@n     Green → SCL
+@n     Yellow → SDA
+@n     Demonstrates begin(), optional parameter tuning, update() per frame, and per-object accessors.
+@n     Parameter ranges are in the method comments of DFRobot_IRPositionV2.py.
 @n
 @n     Two display modes, selected by DISPLAY_MODE below:
 @n       DISPLAY_CONSOLE  -> print all 16 slots to the terminal every frame (works on headless / Lite systems)
@@ -15,7 +20,7 @@
 @license     The MIT License (MIT)
 @author      [thdyyl](yuanlong.yu@dfrobot.com)
 @version     V1.0.0
-@date        2026-10-26
+@date        2026-11-07
 @url         https://github.com/DFRobot/DFRobot_IRPositionV2
 '''
 
@@ -29,9 +34,10 @@ import time
 from DFRobot_IRPositionV2 import *
 
 '''
+  Wiring: Red → VCC, Black → GND, Green → SCL, Yellow → SDA.
   I2C bus and 7-bit address of the bridge
   I2C_1   -> /dev/i2c-1 (default on Raspberry Pi)
-  ADDRESS -> 0x58 (factory default, see set_i2c_address.py to change it)
+  ADDRESS -> 0x58 (factory default, valid 0x08-0x77; see set_i2c_address.py to change it)
 '''
 I2C_1 = 0x01
 ADDRESS = 0x58
@@ -47,10 +53,10 @@ DISPLAY_GUI = 1
 DISPLAY_MODE = DISPLAY_GUI
 
 '''
-  Demo parameters. Valid ranges, see README "Configuration parameter ranges":
-    DEMO_BRIGHTNESS_THRES: 0-255 (typ. default 0x97)
+  Demo parameters:
+    DEMO_BRIGHTNESS_THRES: 0-255 (typ. default 0x97). Higher drops dimmer spots.
     DEMO_NOISE_THRES:      0-255 (typ. default 0x0A)
-    DEMO_SCALE_RESOLUTION: each axis 0-4095 (maps native 98x98; 2490 ~ 30x scale)
+    DEMO_SCALE_RESOLUTION: each axis 0-4095 (maps native 98x98; this example uses 2490)
     DEMO_MAX_TRACKING:     1-16
     DEMO_EXPOSURE:         100-65535, adjust for your lighting
 '''
@@ -111,7 +117,7 @@ def print_frame():
     avg_b = ir_position.get_average_brightness(i)
     max_b = ir_position.get_max_brightness(i)
     rad = ir_position.get_radius(i)
-    print("Obj[%2d] Cxy=(%4d,%4d) AvgB=%3d MaxB=%3d R=%2d Bound(U,D,L,R)=(%d,%d,%d,%d)" % (i, x, y, avg_b, max_b, rad, up, down, left, right))
+    print("Obj[%2d] Cxy(scaled 0-2490)=(%4d,%4d) AvgB(0-255)=%3d MaxB(0-255)=%3d R(px approx)=%2d Bound(U,D,L,R native 0-98)=(%d,%d,%d,%d)" % (i, x, y, avg_b, max_b, rad, up, down, left, right))
   print("----------------------------------------------------------------")
 
 
@@ -289,7 +295,7 @@ class PositionGUI:
 
     self.spot_text.config(state="normal")
     self.spot_text.delete("1.0", "end")
-    self.spot_text.insert("end", " #  (   x,   y) Avg Max  R\n")
+    self.spot_text.insert("end", " # Cxy(scaled 0-2490) A/M(0-255) R(px)\n")
     self.spot_text.insert("end", "\n".join(lines) if lines else "(no spot)")
     self.spot_text.config(state="disabled")
     self.lbl_count.config(text="Tracked spots: %d" % tracked)
