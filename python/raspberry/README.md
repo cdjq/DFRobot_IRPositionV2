@@ -3,7 +3,7 @@ DFRobot_IRPositionV2
 
 - [中文版](./README_CN.md)
 
-The IR positioning module (SKU: SEN0701) tracks up to 16 infrared spots per frame and reports the center, boundary, brightness and radius of each spot. It connects over I2C at the default 7-bit address 0x58.
+This IR positioning module (SKU: SEN0701) uses a PixArt PAJ7025R2 infrared image sensor with an onboard CS32 I2C bridge to detect multiple IR spots in real time and report their positions. The module can track up to 16 infrared spots per frame and outputs the center coordinates, bounding box, average brightness, maximum brightness and approximate radius of each spot. The sensor native resolution is about 98×98; the bridge can scale the X and Y axes independently into a 12-bit output range (0–4095). The host talks to the module over I2C at the default 7-bit address 0x58, and a new address can be saved to Flash (valid range 0x08–0x77, applied after reset or power cycle). This is the Raspberry Pi Python driver: it reads spot coordinates and brightness, and sets the brightness detection threshold, noise threshold, exposure, maximum tracking count, indicator LED and I2C address. One frame is 256 bytes at a 16-bit register address, so it depends on `smbus2`. Example `get_position.py` shows spots in the terminal or a desktop window; `set_i2c_address.py` saves a new address.
 
 Wiring (I2C):
 
@@ -12,7 +12,6 @@ Wiring (I2C):
 - Green → SCL
 - Yellow → SDA
 
-This library drives the module on Raspberry Pi. One frame is 256 bytes at a 16-bit register address, so it depends on `smbus2`.
 
 ## Product Link (https://www.dfrobot.com)
 
